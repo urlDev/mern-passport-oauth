@@ -5,6 +5,9 @@ const passport = require("passport");
 const cookieParser = require("cookie-parser");
 const session = require("express-session");
 const GoogleStrategy = require("passport-google-oauth20").Strategy;
+const TwitterStrategy = require("passport-twitter").Strategy;
+const GitHubStrategy = require("passport-github").Strategy;
+const User = require("./models/user");
 require("dotenv").config();
 require("./db/db");
 
@@ -29,13 +32,79 @@ app.use(cookieParser());
 app.use(passport.initialize());
 app.use(passport.session());
 
-passport.serializeUser((user, done) => {
-  return done(null, user);
+// used to serialize the user for the session
+passport.serializeUser(function (user, done) {
+  done(null, user.id);
 });
 
-passport.deserializeUser((user, done) => {
-  return done(null, user);
+// used to deserialize the user
+passport.deserializeUser(function (id, done) {
+  User.findById(id, function (err, user) {
+    done(err, user);
+  });
 });
+passport.use(
+  new GitHubStrategy(
+    {
+      clientID: process.env.GITHUB_CLIENT_ID,
+      clientSecret: process.env.GITHUB_CLIENT_SECRET,
+      callbackURL: "http://localhost:4000/auth/github/callback",
+    },
+    function (accessToken, refreshToken, profile, cb) {
+      User.findOne({ githubId: profile.id }, async (err, doc) => {
+        if (err) {
+          return cb(err, null);
+        }
+
+        if (!doc) {
+          //create one
+          const newUser = new User({
+            githubId: profile.id,
+            name: profile.displayName,
+            username: profile.username,
+          });
+
+          await newUser.save();
+          // send new user
+          cb(null, newUser);
+        }
+        // if there is already a user, send the user in the db
+        cb(null, doc);
+      });
+    }
+  )
+);
+
+passport.use(
+  new TwitterStrategy(
+    {
+      consumerKey: process.env.TWITTER_CONSUMER_KEY,
+      consumerSecret: process.env.TWITTER_CONSUMER_SECRET,
+      callbackURL: "http://localhost:4000/auth/twitter/callback",
+    },
+    function (token, tokenSecret, profile, cb) {
+      User.findOne({ twitterId: profile.id }, async (err, doc) => {
+        if (err) {
+          return cb(err, null);
+        }
+
+        if (!doc) {
+          //create one
+          const newUser = new User({
+            twitterId: profile.id,
+            name: profile.displayName,
+            username: profile.username,
+          });
+
+          await newUser.save();
+          cb(null, newUser);
+        } // successful authentication!
+        // insert into db
+        cb(null, doc);
+      });
+    }
+  )
+);
 
 passport.use(
   new GoogleStrategy(
@@ -45,9 +114,25 @@ passport.use(
       callbackURL: "/auth/google/callback",
     },
     function (accessToken, refreshToken, profile, cb) {
-      // successful authentication!
-      // insert into db
-      cb(null, profile);
+      User.findOne({ googleId: profile.id }, async (err, doc) => {
+        if (err) {
+          return cb(err, null);
+        }
+
+        if (!doc) {
+          //create one
+          const newUser = new User({
+            googleId: profile.id,
+            name: profile.displayName,
+            username: profile.name.familyName,
+          });
+
+          await newUser.save();
+          cb(null, newUser);
+        } // successful authentication!
+        // insert into db
+        cb(null, doc);
+      });
     }
   )
 );
