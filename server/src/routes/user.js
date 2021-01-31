@@ -48,4 +48,11 @@ router.get("/getUser", (req, res) => {
   res.send(req.user);
 });
 
+router.get("/logout", (req, res) => {
+  if (req.user) {
+    req.logOut();
+    res.send("success");
+  }
+});
+
 module.exports = router;

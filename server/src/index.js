@@ -48,7 +48,7 @@ passport.use(
     {
       clientID: process.env.GITHUB_CLIENT_ID,
       clientSecret: process.env.GITHUB_CLIENT_SECRET,
-      callbackURL: "http://localhost:4000/auth/github/callback",
+      callbackURL: "/auth/github/callback",
     },
     function (accessToken, refreshToken, profile, cb) {
       User.findOne({ githubId: profile.id }, async (err, doc) => {
@@ -80,7 +80,7 @@ passport.use(
     {
       consumerKey: process.env.TWITTER_CONSUMER_KEY,
       consumerSecret: process.env.TWITTER_CONSUMER_SECRET,
-      callbackURL: "http://localhost:4000/auth/twitter/callback",
+      callbackURL: "/auth/twitter/callback",
     },
     function (token, tokenSecret, profile, cb) {
       User.findOne({ twitterId: profile.id }, async (err, doc) => {
